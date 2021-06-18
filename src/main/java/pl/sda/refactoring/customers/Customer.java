@@ -36,6 +36,31 @@ public class Customer {
     private String addrZipCode;
     private String addrCountryCode;
 
+    static Customer createPersonFrom(RegisterPersonForm form) {
+        final var customer = new Customer();
+        customer.initializePerson(form);
+        return customer;
+    }
+
+    void initializePerson(RegisterPersonForm form) {
+        this.id = UUID.randomUUID();
+        this.type = PERSON;
+        this.ctime = LocalDateTime.now();
+
+        if (form.isEmailValid()) {
+            this.email = form.getEmail();
+        }
+        if (form.isFirstNameValid()) {
+            this.fName = form.getFirstName();
+        }
+        if (form.isLastNameValid()) {
+            this.lName = form.getLastName();
+        }
+        if (form.isPeselValid()) {
+            this.pesel = form.getPesel();
+        }
+    }
+
     public UUID getId() {
         return id;
     }
@@ -56,7 +81,7 @@ public class Customer {
         return ctime;
     }
 
-    public void setCtime(LocalDateTime ctime) {
+    public void setCreateTime(LocalDateTime ctime) {
         this.ctime = ctime;
     }
 
@@ -162,6 +187,16 @@ public class Customer {
 
     public void setVerifBy(CustomerVerifier verifBy) {
         this.verifBy = verifBy;
+    }
+
+    void markVerified() {
+        this.verf = true;
+        this.verfTime = LocalDateTime.now();
+        this.verifBy = CustomerVerifier.AUTO_EMAIL;
+    }
+
+    boolean isValidPerson() {
+        return email != null && fName != null && lName != null && pesel != null;
     }
 
     @Override
