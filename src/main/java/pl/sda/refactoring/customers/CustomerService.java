@@ -2,31 +2,20 @@ package pl.sda.refactoring.customers;
 
 import static java.util.Objects.requireNonNull;
 
-import java.time.LocalDateTime;
-import java.util.Properties;
 import java.util.UUID;
-import java.util.regex.Pattern;
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.Multipart;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 
 public final class CustomerService {
 
     private CustomerDao dao;
+    private MailSender mailSender;
 
     // TODO - remove and make dao final
     public CustomerService() {
     }
 
-    public CustomerService(CustomerDao dao) {
+    public CustomerService(CustomerDao dao, MailSender mailSender) {
         this.dao = requireNonNull(dao);
+        this.mailSender = requireNonNull(mailSender);
     }
 
     public boolean registerPerson(RegisterPersonForm form) {
@@ -52,7 +41,7 @@ public final class CustomerService {
                 "We registered you in our service. Please wait for verification!";
         }
         dao.save(customer);
-        sendEmail(form.getEmail(), subj, body);
+        mailSender.sendEmail(form.getEmail(), subj, body);
         return true;
     }
 
@@ -60,67 +49,35 @@ public final class CustomerService {
         return dao.emailExists(form.getEmail()) || dao.peselExists(form.getPesel());
     }
 
-    /**
-     * Register new company type customer
-     * @param email
-     * @param name
-     * @param vat
-     * @param verified
-     * @return
-     */
-    public boolean registerCompany(String email, String name, String vat, boolean verified) {
-        var result = false;
-        var customer = new Customer();
-        customer.setType(Customer.COMPANY);
-        var isInDb = dao.emailExists(email) || dao.vatExists(vat);
-        if (!isInDb) {
-            if (email != null && name != null && vat != null) {
-                var emailP = Pattern.compile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])");
-                var emailM = emailP.matcher(email);
-                if (emailM.matches()) {
-                    customer.setEmail(email);
-                }
-                if (name.length() > 0 && name.matches("[\\p{L}\\s\\.]{2,100}")) {
-                    customer.setCompName(name);
-                }
-                if (vat.length() == 10 && vat.matches("\\d{10}")) {
-                    customer.setCompVat(vat);
-                }
-
-                if (isValidCompany(customer)) {
-                    result = true;
-                }
-            }
+    public boolean registerCompany(RegisterCompanyForm form) {
+        if (isCompanyRegistered(form.getEmail(), form.getVat()) || !form.isFilled()) {
+            return false;
+        }
+        Customer customer = Customer.createCompanyFrom(form);
+        if (!customer.isValidCompany()) {
+            return false;
         }
 
-        if (result == true) {
-            customer.setCreateTime(LocalDateTime.now());
-            String subj;
-            String body;
-            if (verified) {
-                customer.setVerf(verified);
-                customer.setVerfTime(LocalDateTime.now());
-                customer.setVerifBy(CustomerVerifier.AUTO_EMAIL);
-                subj = "Your are now verified customer!";
-                body = "<b>Your company: " + name + " is ready to make na order.</b><br/>" +
-                    "Thank you for registering in our service. Now you are verified customer!";
-            } else {
-                customer.setVerf(false);
-                subj = "Waiting for verification";
-                body = "<b>Hello</b><br/>" +
-                    "We registered your company: " + name + " in our service. Please wait for verification!";
-            }
-            customer.setId(UUID.randomUUID());
-            dao.save(customer);
-            // send email to customer
-            result = sendEmail(email, subj, body);
+        String subj;
+        String body;
+        if (form.isVerified()) {
+            customer.markVerified();
+            subj = "Your are now verified customer!";
+            body = "<b>Your company: " + form.getName() + " is ready to make na order.</b><br/>" +
+                "Thank you for registering in our service. Now you are verified customer!";
+        } else {
+            customer.setVerf(false);
+            subj = "Waiting for verification";
+            body = "<b>Hello</b><br/>" +
+                "We registered your company: " + form.getName() + " in our service. Please wait for verification!";
         }
 
-        return result;
+        dao.save(customer);
+        return mailSender.sendEmail(form.getEmail(), subj, body);
     }
 
-    private boolean isValidCompany(Customer customer) {
-        return customer.getEmail() != null && customer.getCompName() != null && customer.getCompVat() != null;
+    private boolean isCompanyRegistered(String email, String vat) {
+        return dao.emailExists(email) || dao.vatExists(vat);
     }
 
     /**
@@ -145,44 +102,6 @@ public final class CustomerService {
            result = true;
         }
         return result;
-    }
-
-    private boolean sendEmail(String address, String subj, String msg) {
-        Properties prop = new Properties();
-        prop.put("mail.smtp.auth", true);
-        prop.put("mail.smtp.starttls.enable", "true");
-        prop.put("mail.smtp.host", System.getenv().get("MAIL_SMTP_HOST"));
-        prop.put("mail.smtp.port", System.getenv().get("MAIL_SMTP_PORT"));
-        prop.put("mail.smtp.ssl.trust", System.getenv().get("MAIL_SMTP_SSL_TRUST"));
-
-        Session session = Session.getInstance(prop, new Authenticator() {
-            @Override
-            protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication("admin", "admin");
-            }
-        });
-
-        try {
-            Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress("no-reply@company.com"));
-            message.setRecipients(
-                Message.RecipientType.TO, InternetAddress.parse(address));
-            message.setSubject(subj);
-
-            MimeBodyPart mimeBodyPart = new MimeBodyPart();
-            mimeBodyPart.setContent(msg, "text/html");
-
-            Multipart multipart = new MimeMultipart();
-            multipart.addBodyPart(mimeBodyPart);
-
-            message.setContent(multipart);
-
-            Transport.send(message);
-            return true;
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return false;
-        }
     }
 
     public void setDao(CustomerDao dao) {
