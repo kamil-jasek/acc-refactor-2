@@ -1,13 +1,20 @@
 package pl.sda.refactoring.customers;
 
+import static java.lang.String.format;
+
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import pl.sda.refactoring.customers.exception.InvalidCustomerDataException;
 
 /**
  * The customer, can be person or company
  */
 public class Customer {
+
+    public static final Pattern EMAIL_PATTERN = Pattern.compile(
+        "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9]))\\.){3}(?:(2(5[0-5]|[0-4][0-9])|1[0-9][0-9]|[1-9]?[0-9])|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])");
 
     // customer types
     public static final int COMPANY = 1;
@@ -47,16 +54,10 @@ public class Customer {
         customer.setId(UUID.randomUUID());
         customer.setType(COMPANY);
         customer.setCreateTime(LocalDateTime.now());
-
-        if (form.hasValidEmail()) {
-            customer.setEmail(form.getEmail());
-        }
-        if (form.hasValidName()) {
-            customer.setCompName(form.getName());
-        }
-        if (form.hasValidVat()) {
-            customer.setCompVat(form.getVat());
-        }
+        customer.setEmail(form.getEmail());
+        customer.setCompName(form.getName());
+        customer.setCompVat(form.getVat());
+        customer.validateCompany();
         return customer;
     }
 
@@ -217,8 +218,28 @@ public class Customer {
         return email != null && fName != null && lName != null && pesel != null;
     }
 
-    boolean isValidCompany() {
-        return email != null && compName != null && compVat != null;
+    void validateCompany() {
+        validateEmail();
+        validateCompanyName();
+        validateVat();
+    }
+
+    private void validateEmail() {
+        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new InvalidCustomerDataException(format("invalid email: %s", email));
+        }
+    }
+
+    private void validateCompanyName() {
+        if (compName == null || !compName.matches("[\\p{L}\\s\\.]{2,100}")) {
+            throw new InvalidCustomerDataException(format("invalid company name: %s", compName));
+        }
+    }
+
+    private void validateVat() {
+        if (compVat == null || !compVat.matches("\\d{10}")) {
+            throw new InvalidCustomerDataException(format("invalid company vat: %s", compVat));
+        }
     }
 
     @Override

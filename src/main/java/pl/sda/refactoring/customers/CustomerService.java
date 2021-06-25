@@ -1,8 +1,11 @@
 package pl.sda.refactoring.customers;
 
+import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
 import java.util.UUID;
+import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
+import pl.sda.refactoring.customers.exception.RegistrationFormNotFilledException;
 
 public final class CustomerService {
 
@@ -50,14 +53,8 @@ public final class CustomerService {
     }
 
     public boolean registerCompany(RegisterCompanyForm form) {
-        if (isCompanyRegistered(form.getEmail(), form.getVat()) || !form.isFilled()) {
-            return false;
-        }
-        Customer customer = Customer.createCompanyFrom(form);
-        if (!customer.isValidCompany()) {
-            return false;
-        }
-
+        verifyForm(form);
+        final var customer = Customer.createCompanyFrom(form);
         String subj;
         String body;
         if (form.isVerified()) {
@@ -74,6 +71,14 @@ public final class CustomerService {
 
         dao.save(customer);
         return mailSender.sendEmail(form.getEmail(), subj, body);
+    }
+
+    private void verifyForm(RegisterCompanyForm form) {
+        if (isCompanyRegistered(form.getEmail(), form.getVat())) {
+            throw new CompanyAlreadyExistsException(format("company exists: %s", form));
+        } else if (!form.isFilled()) {
+            throw new RegistrationFormNotFilledException(format("form not filled: %s", form));
+        }
     }
 
     private boolean isCompanyRegistered(String email, String vat) {
