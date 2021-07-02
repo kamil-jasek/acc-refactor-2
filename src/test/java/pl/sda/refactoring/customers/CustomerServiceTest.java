@@ -13,8 +13,8 @@ import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
 
 public class CustomerServiceTest {
 
-    private final MailSender mailSender = (address, subject, content) -> {};
     private final InMemoryCustomerDao customerDao = new InMemoryCustomerDao();
+    private final CustomerService service = new CustomerService(customerDao, (address, subject, content) -> {});
 
     @ParameterizedTest
     @CsvSource({
@@ -22,9 +22,6 @@ public class CustomerServiceTest {
         "email@test.com,Comp S.A.,5584393931",
     })
     public void shouldRegisterVerifiedCompany(String email, String name, String vat) {
-        // given
-        final var service = new CustomerService(customerDao, mailSender);
-
         // when
         final var registeredCompany = service.registerCompany(new RegisterCompanyForm(email,
             name,
@@ -46,7 +43,6 @@ public class CustomerServiceTest {
     public void shouldNotRegisterCompanyIfAlreadyExistsInDatabase() {
         // given
         customerDao.save(customerWithEmail("mail@comp.com"));
-        final var service = new CustomerService(customerDao, mailSender);
 
         // then
         assertThrows(CompanyAlreadyExistsException.class, () -> service.registerCompany(new RegisterCompanyForm(
