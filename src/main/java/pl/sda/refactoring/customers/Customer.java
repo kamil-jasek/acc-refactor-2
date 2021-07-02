@@ -51,14 +51,42 @@ public class Customer {
 
     static Customer createCompanyFrom(RegisterCompanyForm form) {
         var customer = new Customer();
-        customer.setId(UUID.randomUUID());
-        customer.setType(COMPANY);
-        customer.setCreateTime(LocalDateTime.now());
-        customer.setEmail(form.getEmail());
-        customer.setCompName(form.getName());
-        customer.setCompVat(form.getVat());
-        customer.validateCompany();
+        customer.initializeCompany(form);
         return customer;
+    }
+
+    void initializeCompany(RegisterCompanyForm form) {
+        this.id = UUID.randomUUID();
+        this.type = COMPANY;
+        this.ctime = LocalDateTime.now();
+        this.email = form.getEmail();
+        this.compName = form.getName();
+        this.compVat = form.getVat();
+        validateCompany();
+    }
+
+    void validateCompany() {
+        validateEmail();
+        validateCompanyName();
+        validateVat();
+    }
+
+    private void validateEmail() {
+        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
+            throw new InvalidCustomerDataException(format("invalid email: %s", email));
+        }
+    }
+
+    private void validateCompanyName() {
+        if (compName == null || !compName.matches("[\\p{L}\\s\\.]{2,100}")) {
+            throw new InvalidCustomerDataException(format("invalid company name: %s", compName));
+        }
+    }
+
+    private void validateVat() {
+        if (compVat == null || !compVat.matches("\\d{10}")) {
+            throw new InvalidCustomerDataException(format("invalid company vat: %s", compVat));
+        }
     }
 
     void initializePerson(RegisterPersonForm form) {
@@ -216,30 +244,6 @@ public class Customer {
 
     boolean isValidPerson() {
         return email != null && fName != null && lName != null && pesel != null;
-    }
-
-    void validateCompany() {
-        validateEmail();
-        validateCompanyName();
-        validateVat();
-    }
-
-    private void validateEmail() {
-        if (email == null || !EMAIL_PATTERN.matcher(email).matches()) {
-            throw new InvalidCustomerDataException(format("invalid email: %s", email));
-        }
-    }
-
-    private void validateCompanyName() {
-        if (compName == null || !compName.matches("[\\p{L}\\s\\.]{2,100}")) {
-            throw new InvalidCustomerDataException(format("invalid company name: %s", compName));
-        }
-    }
-
-    private void validateVat() {
-        if (compVat == null || !compVat.matches("\\d{10}")) {
-            throw new InvalidCustomerDataException(format("invalid company vat: %s", compVat));
-        }
     }
 
     @Override

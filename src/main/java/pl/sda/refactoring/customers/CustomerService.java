@@ -5,7 +5,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.UUID;
 import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
-import pl.sda.refactoring.customers.exception.RegistrationFormNotFilledException;
 
 public final class CustomerService {
 
@@ -52,8 +51,10 @@ public final class CustomerService {
         return dao.emailExists(form.getEmail()) || dao.peselExists(form.getPesel());
     }
 
-    public boolean registerCompany(RegisterCompanyForm form) {
-        verifyForm(form);
+    public void registerCompany(RegisterCompanyForm form) {
+        if (isCompanyRegistered(form.getEmail(), form.getVat())) {
+            throw new CompanyAlreadyExistsException(format("company exists: %s", form));
+        }
         final var customer = Customer.createCompanyFrom(form);
         String subj;
         String body;
@@ -70,15 +71,7 @@ public final class CustomerService {
         }
 
         dao.save(customer);
-        return mailSender.sendEmail(form.getEmail(), subj, body);
-    }
-
-    private void verifyForm(RegisterCompanyForm form) {
-        if (isCompanyRegistered(form.getEmail(), form.getVat())) {
-            throw new CompanyAlreadyExistsException(format("company exists: %s", form));
-        } else if (!form.isFilled()) {
-            throw new RegistrationFormNotFilledException(format("form not filled: %s", form));
-        }
+        mailSender.sendEmail(form.getEmail(), subj, body);
     }
 
     private boolean isCompanyRegistered(String email, String vat) {

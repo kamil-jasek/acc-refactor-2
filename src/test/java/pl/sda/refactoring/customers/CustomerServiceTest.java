@@ -1,20 +1,14 @@
 package pl.sda.refactoring.customers;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.Map;
-import javax.mail.Transport;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
@@ -24,11 +18,6 @@ import pl.sda.refactoring.customers.exception.RegistrationFormNotFilledException
 public class CustomerServiceTest {
 
     private final MailSender mailSender = mock(MailSender.class);
-
-    @BeforeEach
-    public void beforeEach() {
-        when(mailSender.sendEmail(anyString(), anyString(), anyString())).thenReturn(true);
-    }
 
     @Test
     public void shouldRegisterVerifiedCompany() {
@@ -40,10 +29,9 @@ public class CustomerServiceTest {
         var service = new CustomerService(dao, mailSender);
 
         // when
-        var reg = service.registerCompany(new RegisterCompanyForm("test@test.com", "Test S.A.", "9302030403", true));
+        service.registerCompany(new RegisterCompanyForm("test@test.com", "Test S.A.", "9302030403", true));
 
         // then
-        assertTrue(reg);
         verify(dao).save(customerCapture.capture());
         var customer = customerCapture.getValue();
         assertNotNull(customer.getId());
@@ -69,19 +57,6 @@ public class CustomerServiceTest {
             "Test S.A.",
             "9302030403",
             true)));
-    }
-
-    @Test
-    public void shouldNotRegisterCompanyIfFormIsNotFilled() {
-        // given
-        final var customerDao = mock(CustomerDao.class);
-        when(customerDao.emailExists(anyString())).thenReturn(false);
-        when(customerDao.vatExists(anyString())).thenReturn(false);
-        final var service = new CustomerService(customerDao, mailSender);
-
-        // then
-        assertThrows(RegistrationFormNotFilledException.class, () -> service.registerCompany(new RegisterCompanyForm(
-            null, null, null, true)));
     }
 
     @Test

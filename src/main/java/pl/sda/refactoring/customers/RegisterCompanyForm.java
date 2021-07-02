@@ -1,5 +1,9 @@
 package pl.sda.refactoring.customers;
 
+import static java.lang.String.format;
+
+import pl.sda.refactoring.customers.exception.RegistrationFormNotFilledException;
+
 public final class RegisterCompanyForm {
 
     private final String email;
@@ -12,6 +16,17 @@ public final class RegisterCompanyForm {
         this.name = name;
         this.vat = vat;
         this.verified = verified;
+        verifyForm();
+    }
+
+    private void verifyForm() {
+        if (!isFilled()) {
+            throw new RegistrationFormNotFilledException(format("form not filled: %s", this));
+        }
+    }
+
+    boolean isFilled() {
+        return getEmail() != null && getName() != null && getVat() != null;
     }
 
     public String getEmail() {
@@ -28,10 +43,6 @@ public final class RegisterCompanyForm {
 
     public boolean isVerified() {
         return verified;
-    }
-
-    boolean isFilled() {
-        return getEmail() != null && getName() != null && getVat() != null;
     }
 
     @Override
