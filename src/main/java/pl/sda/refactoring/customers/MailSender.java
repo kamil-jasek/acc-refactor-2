@@ -2,5 +2,5 @@ package pl.sda.refactoring.customers;
 
 interface MailSender {
 
-    void sendEmail(String address, String subj, String msg);
+    void sendEmail(String address, String subject, String content);
 }

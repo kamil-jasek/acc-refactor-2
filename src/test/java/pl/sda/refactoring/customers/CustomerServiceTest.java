@@ -4,40 +4,39 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
-import pl.sda.refactoring.customers.exception.InvalidCustomerDataException;
-import pl.sda.refactoring.customers.exception.RegistrationFormNotFilledException;
 
 public class CustomerServiceTest {
 
-    private final MailSender mailSender = mock(MailSender.class);
+    private final MailSender mailSender = (address, subject, content) -> {};
+    private final InMemoryCustomerDao customerDao = new InMemoryCustomerDao();
 
-    @Test
-    public void shouldRegisterVerifiedCompany() {
+    @ParameterizedTest
+    @CsvSource({
+        "test@test.com,Test S.A.,9384393931",
+        "email@test.com,Comp S.A.,5584393931",
+    })
+    public void shouldRegisterVerifiedCompany(String email, String name, String vat) {
         // given
-        var dao = mock(CustomerDao.class);
-        when(dao.emailExists(anyString())).thenReturn(false);
-        when(dao.vatExists(anyString())).thenReturn(false);
-        var customerCapture = ArgumentCaptor.forClass(Customer.class);
-        var service = new CustomerService(dao, mailSender);
+        final var service = new CustomerService(customerDao, mailSender);
 
         // when
-        service.registerCompany(new RegisterCompanyForm("test@test.com", "Test S.A.", "9302030403", true));
+        final var registeredCompany = service.registerCompany(new RegisterCompanyForm(email,
+            name,
+            vat,
+            true));
 
         // then
-        verify(dao).save(customerCapture.capture());
-        var customer = customerCapture.getValue();
-        assertNotNull(customer.getId());
-        assertEquals(customer.getEmail(), "test@test.com");
-        assertEquals(customer.getCompName(), "Test S.A.");
-        assertEquals(customer.getCompVat(), "9302030403");
+        final var customer = customerDao.getCustomerById(registeredCompany.getId());
+        assertEquals(customer.getId(), registeredCompany.getId());
+        assertEquals(customer.getEmail(), email);
+        assertEquals(customer.getCompName(), name);
+        assertEquals(customer.getCompVat(), vat);
         assertTrue(customer.isVerf());
         assertEquals(customer.getVerifBy(), CustomerVerifier.AUTO_EMAIL);
         assertNotNull(customer.getVerfTime());
@@ -46,9 +45,7 @@ public class CustomerServiceTest {
     @Test
     public void shouldNotRegisterCompanyIfAlreadyExistsInDatabase() {
         // given
-        final var customerDao = mock(CustomerDao.class);
-        when(customerDao.emailExists(anyString())).thenReturn(true);
-        when(customerDao.vatExists(anyString())).thenReturn(true);
+        customerDao.save(customerWithEmail("mail@comp.com"));
         final var service = new CustomerService(customerDao, mailSender);
 
         // then
@@ -59,43 +56,10 @@ public class CustomerServiceTest {
             true)));
     }
 
-    @Test
-    public void testEmailFail() {
-        // given
-        var dao = mock(CustomerDao.class);
-        when(dao.emailExists(anyString())).thenReturn(false);
-        when(dao.vatExists(anyString())).thenReturn(false);
-        var service = new CustomerService(dao, mailSender);
-
-        // then
-        assertThrows(InvalidCustomerDataException.class, () -> service.registerCompany(new RegisterCompanyForm(
-            "invalid@", "Test S.A.", "9302030403", true)));
-    }
-
-    @Test
-    public void testNameFail() {
-        // given
-        final var dao = mock(CustomerDao.class);
-        when(dao.emailExists(anyString())).thenReturn(false);
-        when(dao.vatExists(anyString())).thenReturn(false);
-        final var service = new CustomerService(dao, mailSender);
-
-        // when
-        assertThrows(InvalidCustomerDataException.class, () -> service.registerCompany(new RegisterCompanyForm(
-            "test@ok.com", "F&", "9302030403", true)));
-
-    }
-
-    @Test
-    public void testVatFail() {
-        // given
-        final var dao = mock(CustomerDao.class);
-        when(dao.emailExists(anyString())).thenReturn(false);
-        when(dao.vatExists(anyString())).thenReturn(false);
-        final var service = new CustomerService(dao, mailSender);
-
-        // then
-        assertThrows(InvalidCustomerDataException.class, () -> service.registerCompany(new RegisterCompanyForm(
-            "test@ok.com", "TestOK", "AB02030403", true)));
+    private Customer customerWithEmail(String email) {
+        final var customer = new Customer();
+        customer.setId(UUID.randomUUID());
+        customer.setEmail(email);
+        return customer;
     }
 }

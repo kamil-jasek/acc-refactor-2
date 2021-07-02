@@ -51,7 +51,7 @@ public final class CustomerService {
         return dao.emailExists(form.getEmail()) || dao.peselExists(form.getPesel());
     }
 
-    public void registerCompany(RegisterCompanyForm form) {
+    public RegisteredCompany registerCompany(RegisterCompanyForm form) {
         if (isCompanyRegistered(form.getEmail(), form.getVat())) {
             throw new CompanyAlreadyExistsException(format("company exists: %s", form));
         }
@@ -72,6 +72,7 @@ public final class CustomerService {
 
         dao.save(customer);
         mailSender.sendEmail(form.getEmail(), subj, body);
+        return new RegisteredCompany(customer.getId());
     }
 
     private boolean isCompanyRegistered(String email, String vat) {
