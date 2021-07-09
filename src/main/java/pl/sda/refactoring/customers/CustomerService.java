@@ -3,7 +3,6 @@ package pl.sda.refactoring.customers;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
 
-import java.util.UUID;
 import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
 
 public final class CustomerService {
@@ -37,7 +36,6 @@ public final class CustomerService {
             body = "<b>Hi " + form.getFirstName() + "</b><br/>" +
                 "Thank you for registering in our service. Now you are verified customer!";
         } else {
-            customer.setVerf(false);
             subj = "Waiting for verification";
             body = "<b>Hi " + form.getFirstName() + "</b><br/>" +
                 "We registered you in our service. Please wait for verification!";
@@ -64,7 +62,6 @@ public final class CustomerService {
             body = "<b>Your company: " + form.getName() + " is ready to make na order.</b><br/>" +
                 "Thank you for registering in our service. Now you are verified customer!";
         } else {
-            customer.setVerf(false);
             subj = "Waiting for verification";
             body = "<b>Hello</b><br/>" +
                 "We registered your company: " + form.getName() + " in our service. Please wait for verification!";
@@ -79,25 +76,16 @@ public final class CustomerService {
         return dao.emailExists(email) || dao.vatExists(vat);
     }
 
-    /**
-     * Set new address for customer
-     * @param cid
-     * @param str
-     * @param zipcode
-     * @param city
-     * @param country
-     * @return
-     */
-    public boolean updateAddress(UUID cid, String str, String zipcode, String city, String country) {
+    public boolean updateAddress(UpdateCustomerAddressRequest updateRequest) {
         var result = false;
-        var customer = dao.findById(cid);
-        if (customer.isPresent()) {
-           var object = customer.get();
-           object.setAddrStreet(str);
-           object.setAddrZipCode(zipcode);
-           object.setAddrCity(city);
-           object.setAddrCountryCode(country);
-           dao.save(object);
+        var optional = dao.findById(updateRequest.getCustomerId());
+        if (optional.isPresent()) {
+           final var customer = optional.get();
+           customer.updateAddress(new Address(updateRequest.getStreet(),
+               updateRequest.getCity(),
+               updateRequest.getZipcode(),
+               updateRequest.getCountry()));
+           dao.save(customer);
            result = true;
         }
         return result;

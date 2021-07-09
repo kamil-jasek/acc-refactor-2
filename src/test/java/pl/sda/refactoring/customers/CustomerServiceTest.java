@@ -53,9 +53,6 @@ public class CustomerServiceTest {
     }
 
     private Customer customerWithEmail(String email) {
-        final var customer = new Customer();
-        customer.setId(UUID.randomUUID());
-        customer.setEmail(email);
-        return customer;
+        return new Customer(email, "Some name", "0393920331");
     }
 }

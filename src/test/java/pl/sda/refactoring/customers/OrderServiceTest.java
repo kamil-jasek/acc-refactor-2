@@ -37,12 +37,7 @@ public class OrderServiceTest {
         service.setCouponsDao(couponDao);
 
         // some customer
-        var cid = UUID.randomUUID();
-        var customer = new Customer();
-        customer.setId(cid);
-        customer.setCompName("Test S.A.");
-        customer.setCompVat("12020303");
-        customer.setEmail("email@email.com");
+        var customer = new Customer("email@email.com", "Test S.A.", "1202030300");
         when(customerDao.findById(any())).thenReturn(Optional.of(customer));
 
         // some product item
@@ -55,7 +50,7 @@ public class OrderServiceTest {
         var orderCapture = ArgumentCaptor.forClass(Order.class);
 
         // test it
-        final var result = service.makeOrder(cid, List.of(item), "test");
+        final var result = service.makeOrder(customer.getId(), List.of(item), "test");
         verify(dao).save(orderCapture.capture());
         var order = orderCapture.getValue();
         assertTrue(result);
@@ -83,12 +78,7 @@ public class OrderServiceTest {
         service.setCouponsDao(couponDao);
 
         // some customer
-        var cid = UUID.randomUUID();
-        var customer = new Customer();
-        customer.setId(cid);
-        customer.setCompName("Test S.A.");
-        customer.setCompVat("12020303");
-        customer.setEmail("email@email.com");
+        var customer = new Customer("email@email.com", "Test S.A.", "1202030300");
         when(customerDao.findById(any())).thenReturn(Optional.of(customer));
 
         var dc = new DiscountCoupon();
@@ -105,7 +95,7 @@ public class OrderServiceTest {
         var orderCapture = ArgumentCaptor.forClass(Order.class);
 
         // test it
-        final var result = service.makeOrder(cid, List.of(item), "test");
+        final var result = service.makeOrder(customer.getId(), List.of(item), "test");
         verify(dao).save(orderCapture.capture());
         var order = orderCapture.getValue();
         assertTrue(result);

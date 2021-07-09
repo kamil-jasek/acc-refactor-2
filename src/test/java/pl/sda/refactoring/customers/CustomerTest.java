@@ -9,32 +9,17 @@ final class CustomerTest {
 
     @Test
     public void shouldNotInitializeCompanyWithInvalidEmail() {
-        // given
-        final var customer = new Customer();
-
-        // then
-        assertThrows(InvalidCustomerDataException.class, () -> customer.initializeCompany(new RegisterCompanyForm(
-            "invalid@", "Test S.A.", "9302030403", true)));
+        assertThrows(InvalidCustomerDataException.class, () -> new Customer("invalid@", "Test S.A.", "9302030403"));
     }
 
     @Test
     public void shouldNotInitializeCompanyWithInvalidName() {
-        // given
-        final var customer = new Customer();
-
-        // when
-        assertThrows(InvalidCustomerDataException.class, () -> customer.initializeCompany(new RegisterCompanyForm(
-            "test@ok.com", "F&", "9302030403", true)));
+        assertThrows(InvalidCustomerDataException.class, () -> new Customer("test@ok.com", "F&", "9302030403"));
 
     }
 
     @Test
     public void shouldNotInitializeCompanyWithInvalidVat() {
-        // given
-        final var customer = new Customer();
-
-        // then
-        assertThrows(InvalidCustomerDataException.class, () -> customer.initializeCompany(new RegisterCompanyForm(
-            "test@ok.com", "TestOK", "AB02030403", true)));
+        assertThrows(InvalidCustomerDataException.class, () -> new Customer("test@ok.com", "TestOK", "AB02030403"));
     }
 }

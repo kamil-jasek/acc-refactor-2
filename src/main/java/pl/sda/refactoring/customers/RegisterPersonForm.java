@@ -44,20 +44,4 @@ public final class RegisterPersonForm {
     boolean isFilled() {
         return email != null && firstName != null && lastName != null && pesel != null;
     }
-
-    boolean isEmailValid() {
-        return EMAIL_PATTERN.matcher(email).matches();
-    }
-
-    boolean isFirstNameValid() {
-        return firstName.length() > 0 && firstName.matches("[\\p{L}\\s\\.]{2,100}");
-    }
-
-    boolean isLastNameValid() {
-        return lastName.length() > 0 && lastName.matches("[\\p{L}\\s\\.]{2,100}");
-    }
-
-    boolean isPeselValid() {
-        return pesel.length() == 11 && pesel.matches("/\\d{11}/");
-    }
 }
