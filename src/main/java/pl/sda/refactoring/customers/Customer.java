@@ -135,6 +135,14 @@ public class Customer {
         return address;
     }
 
+    public String getfName() {
+        return fName;
+    }
+
+    public String getlName() {
+        return lName;
+    }
+
     void markVerified() {
         this.verf = true;
         this.verfTime = LocalDateTime.now();

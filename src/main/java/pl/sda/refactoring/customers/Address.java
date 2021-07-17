@@ -29,4 +29,9 @@ public final class Address {
     public String getCountryCode() {
         return countryCode;
     }
+
+    @Override
+    protected Object clone() throws CloneNotSupportedException {
+        return super.clone();
+    }
 }

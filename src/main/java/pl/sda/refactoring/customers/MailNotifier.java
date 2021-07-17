@@ -14,9 +14,24 @@ import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import pl.sda.refactoring.customers.exception.MailSendFailureException;
 
-final class DefaultMailSender implements MailSender {
+final class MailNotifier implements Notifier {
 
     @Override
+    public void notify(CustomerRegistrationNotification notification) {
+        String subject;
+        String body;
+        if (notification.isVerified()) {
+            subject = "Your are now verified customer!";
+            body = "<b>Hi " + notification.getName() + "</b><br/>" +
+                "Thank you for registering in our service. Now you are verified customer!";
+        } else {
+            subject = "Waiting for verification";
+            body = "<b>Hi " + notification.getName() + "</b><br/>" +
+                "We registered you in our service. Please wait for verification!";
+        }
+        sendEmail(notification.getEmail(), subject, body);
+    }
+
     public void sendEmail(String address, String subject, String content) {
         try {
             final var message = prepareMimeMessage(address, subject);

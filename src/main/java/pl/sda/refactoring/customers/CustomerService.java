@@ -8,15 +8,15 @@ import pl.sda.refactoring.customers.exception.CompanyAlreadyExistsException;
 public final class CustomerService {
 
     private CustomerDao dao;
-    private MailSender mailSender;
+    private Notifier notifier;
 
     // TODO - remove and make dao final
     public CustomerService() {
     }
 
-    public CustomerService(CustomerDao dao, MailSender mailSender) {
+    public CustomerService(CustomerDao dao, Notifier notifier) {
         this.dao = requireNonNull(dao);
-        this.mailSender = requireNonNull(mailSender);
+        this.notifier = requireNonNull(notifier);
     }
 
     public boolean registerPerson(RegisterPersonForm form) {
@@ -27,21 +27,14 @@ public final class CustomerService {
         if (!customer.isValidPerson()) {
             return false;
         }
-
-        String subj;
-        String body;
         if (form.isVerified()) {
             customer.markVerified();
-            subj = "Your are now verified customer!";
-            body = "<b>Hi " + form.getFirstName() + "</b><br/>" +
-                "Thank you for registering in our service. Now you are verified customer!";
-        } else {
-            subj = "Waiting for verification";
-            body = "<b>Hi " + form.getFirstName() + "</b><br/>" +
-                "We registered you in our service. Please wait for verification!";
         }
         dao.save(customer);
-        mailSender.sendEmail(form.getEmail(), subj, body);
+        notifier.notify(new CustomerRegistrationNotification(customer.getId(),
+            customer.getEmail(),
+            customer.getlName(),
+            customer.isVerf()));
         return true;
     }
 
@@ -54,21 +47,15 @@ public final class CustomerService {
             throw new CompanyAlreadyExistsException(format("company exists: %s", form));
         }
         final var customer = Customer.createCompanyFrom(form);
-        String subj;
-        String body;
         if (form.isVerified()) {
             customer.markVerified();
-            subj = "Your are now verified customer!";
-            body = "<b>Your company: " + form.getName() + " is ready to make na order.</b><br/>" +
-                "Thank you for registering in our service. Now you are verified customer!";
-        } else {
-            subj = "Waiting for verification";
-            body = "<b>Hello</b><br/>" +
-                "We registered your company: " + form.getName() + " in our service. Please wait for verification!";
         }
 
         dao.save(customer);
-        mailSender.sendEmail(form.getEmail(), subj, body);
+        notifier.notify(new CustomerRegistrationNotification(customer.getId(),
+            customer.getEmail(),
+            customer.getCompName(),
+            customer.isVerf()));
         return new RegisteredCompany(customer.getId());
     }
 
